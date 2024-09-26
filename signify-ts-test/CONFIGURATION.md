@@ -26,6 +26,14 @@
         * Identifer that is the controller
         * Identifier of the agent
         * KERIA server for the agent
+* Credentials
+   * Credential configuration includes:
+      * Issuer
+      * Issuee
+      * Schema
+      * Attributes
+         * ex. "rp" = "user1"
+         * ex. "LEI" = "SOME LEI VALUE"  
 * Witness
     * Witness configuration includes:
         * Alias
