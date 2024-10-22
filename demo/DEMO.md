@@ -27,7 +27,7 @@
 * This creates a sign-in which 'feels' like a 'session'. Click ```Sign in with Credential``` ![Sign-in created](image-15.png) ![Valid Credential](image-16.png)
 * Click the hamburger menu and select 'Reports' ![Hamburger menu, reports](image-17.png)
 * Click 'Select File' ![Select File](image-18.png)
-* Select the [orig_bundle_20240827_13125_signed.zip](orig_bundle_20240827_13125_signed.zip) attached here ![Select signed report](image-19.png)
+* Select the [orig_bundle_20240827_1313125_signed.zip](orig_bundle_20240827_1313125_signed.zip) attached here ![Select signed report](image-19.png)
 * Click Submit Report, you should see a green indicator and click ```Check Status``` ![Submit report](image-20.png) ![Successfully submitted the report](image-21.png)
 * What does the signature in the report look like? ![Signed report digest and signature](image-23.png)
     * It is just a signature on the sha256 digest of the bytes of the file
