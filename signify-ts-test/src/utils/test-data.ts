@@ -1,10 +1,10 @@
 import path from "path";
 import fs from "fs";
-import { buildAidData } from "vlei-verifier-workflows";
 import { TestEnvironment, TestPaths } from "./resolve-env";
 import { getOrCreateClients } from "./test-util";
 import { ECR_SCHEMA_SAID } from "../constants";
 import { SignifyClient } from "signify-ts";
+import { buildAidData } from "vlei-verifier-workflows/dist/utils/handle-json-config";
 
 export const EXTERNAL_MAN_TYPE = "external_manifest";
 export const SIMPLE_TYPE = "simple";

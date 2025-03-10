@@ -1,7 +1,6 @@
 import {
   StepRunner,
   getOrCreateClients,
-  buildAidData,
   VleiIssuance,
 } from "vlei-verifier-workflows";
 
@@ -21,18 +20,21 @@ import {
 import { TestEnvironment, TestPaths } from "../../src/utils/resolve-env";
 import { createZipWithCopies } from "../../src/utils/bank-reports";
 import { run_vlei_verification_test } from "../vlei-verification";
+import { buildAidData } from "vlei-verifier-workflows/dist/utils/handle-json-config";
+import { TestKeria } from "vlei-verifier-workflows/dist/utils/test-keria";
 
 export class GenerateReportXmlStepRunner extends StepRunner {
   type: string = "generate_report_xml";
   public async run(
-    vi: VleiIssuance,
     stepName: string,
     step: any,
     configJson: any,
   ): Promise<any> {
     const testData = getReportGenTestData();
     const aidData = await buildAidData(configJson);
+    const testKeria = await TestKeria.getInstance(configJson['context']);
     const clients = await getOrCreateClients(
+      testKeria,
       1,
       [aidData[step.aid].agent.secret],
       true,
@@ -66,7 +68,6 @@ export class GenerateReportXmlStepRunner extends StepRunner {
 export class GenerateReportStepRunner extends StepRunner {
   type: string = "generate_report";
   public async run(
-    vi: VleiIssuance,
     stepName: string,
     step: any,
     configJson: any,
@@ -86,7 +87,6 @@ export class GenerateReportStepRunner extends StepRunner {
 export class SignReportStepRunner extends StepRunner {
   type: string = "sign_report";
   public async run(
-    vi: VleiIssuance,
     stepName: string,
     step: any,
     configJson: any,
@@ -108,7 +108,6 @@ export class SignReportStepRunner extends StepRunner {
 export class ApiTestStepRunner extends StepRunner {
   type: string = "api_test";
   public async run(
-    vi: VleiIssuance,
     stepName: string,
     step: any,
     configJson: any,
@@ -118,7 +117,9 @@ export class ApiTestStepRunner extends StepRunner {
     let result;
     if (step.test_case == "api_test_revocation") {
       const aidData = await buildAidData(configJson);
+      const testKeria = await TestKeria.getInstance(configJson['context']);
       const clients = await getOrCreateClients(
+        testKeria,
         1,
         [aidData[step.requestor_aid].agent.secret],
         true,

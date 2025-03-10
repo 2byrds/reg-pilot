@@ -13,10 +13,7 @@ import signify, {
 import { RetryOptions, retry } from "./retry";
 import assert from "assert";
 import {
-  KeriaConfig,
   TestEnvironment,
-  TestKeria,
-  TestPaths,
 } from "./resolve-env";
 import Docker from "dockerode";
 import axios from "axios";

@@ -1,115 +1,33 @@
 services:
-  vlei-server:
-    image: gleif/vlei
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONIOENCODING=UTF-8
-    command:
-      - vLEI-server
-      - -s
-      - ./schema/acdc
-      - -c
-      - ./samples/acdc/
-      - -o
-      - ./samples/oobis/
-    healthcheck:
-      test:
-        - CMD
-        - curl
-        - -f
-        - http://localhost:7723/oobi/EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao
-      interval: 2s
-      timeout: 3s
-      retries: 5
-      start_period: 2s
-    ports:
-      - 7723:7723
-
-  keria:
-    image: ${BANK_KERIA_IMAGE:-ronakseth96/keria:latest}
-    environment:
-      - KERI_AGENT_CORS=1
-      - KERI_URL=http://keria:3902
-      - PYTHONUNBUFFERED=1
-      - PYTHONIOENCODING=UTF-8
-    volumes:
-      - ./config/testkeria.json:/keria/config/keri/cf/keria.json
-    entrypoint:
-      [
-        "keria",
-        "start",
-        "--config-dir",
-        "/keria/config",
-        "--config-file",
-        "keria",
-        "--name",
-        "agent",
-      ]
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "http://keria:3902/spec.yaml"]
-      interval: 2s
-      timeout: 3s
-      retries: 5
-      start_period: 2s
-    ports:
-      - 3901:3901
-      - 3902:3902
-      - 3903:3903
-
-  witness-demo:
-    image: weboftrust/keri-witness-demo:1.1.0
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONIOENCODING=UTF-8
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5642/oobi"]
-      interval: 2s
-      timeout: 3s
-      retries: 5
-      start_period: 2s
-    volumes:
-      - ./config/witness-demo:/keripy/scripts/keri/cf/main
-    ports:
-      - 5642:5642
-      - 5643:5643
-      - 5644:5644
-
   reg-pilot-api:
     image: gleif/reg-pilot-api:0.1.0
+    platform: linux/amd64
+    network_mode: host
     ports:
       - 8000:8000
     environment:
       - ENABLE_CORS=true
-      - VLEI_VERIFIER=http://vlei-verifier:7676
-      - FILER_REPORTS=http://vlei-verifier:7676/reports/
+      - VLEI_VERIFIER=http://localhost:7676
+      - FILER_REPORTS=http://localhost:7676/reports/
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://reg-pilot-api:8000/ping"]
+      test: ["CMD", "wget", "--spider", "http://localhost:8000/ping"]
       interval: 2s
       timeout: 3s
       retries: 5
       start_period: 2s
-
-  vlei-verifier:
-    image: gleif/vlei-verifier:0.0.3
-    container_name: vlei-verifier
-    hostname: vlei-verifier
-    depends_on:
-      - vlei-server
-      - witness-demo
-    ports:
-      - 7676:7676
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "http://vlei-verifier:7676/health"]
-      interval: 2s
-      timeout: 3s
-      retries: 5
-      start_period: 2s
+    extra_hosts:
+      - 'localhost:127.0.0.1'
 
   verify:
     image: alpine
     command: ["echo", "Dependencies running"]
     depends_on:
       reg-pilot-api:
-        condition: service_healthy
-      vlei-verifier:
         condition: service_healthy
