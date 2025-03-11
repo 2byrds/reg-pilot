@@ -40,8 +40,8 @@ console.log(`run-workflow-bank process.argv array: ${process.argv}`);
 
 // Test context constants - use these for test names, configJson['context'], and keria instance IDs
 const TEST_CONTEXTS = {
-  API_TEST: "reg-api-bank-test-workflow",
-  // EBA_TEST: "eba-bank-test-workflow",
+  // API_TEST: "reg-api-bank-test-workflow",
+  EBA_TEST: "eba-bank-test-workflow",
   // ISSUANCE_TEST: "issuance-bank-test-workflow",
 };
 
@@ -179,7 +179,7 @@ afterAll(async () => {
 
 test("reg-api-bank-test-workflow", async function run() {
   console.log(`Running api-verifier-bank-test-workflow for bank: ${bankName}`);
-  const keriaInstance = await TestKeria.getInstance(TEST_CONTEXTS.API_TEST)
+  const keriaInstance = await TestKeria.getInstance("reg-api-bank-test-workflow")
   env = TestEnvironment.getInstance("docker", keriaInstance);
 
   await downloadConfigWorkflowReports(bankName, true, false, false, refresh);
@@ -212,14 +212,15 @@ test("eba-verifier-prep-only", async function run() {
   configJson = await getConfig(testPaths.testUserConfigFile);
 });
 
-test(ARG_KERIA_START_PORT, async function run() {
+test("eba-bank-test-workflow", async function run() {
   console.log(`Running eba-verifier-bank-test-workflow for bank: ${bankName}`);
-  env = TestEnvironment.getInstance("eba_bank_test", await TestKeria.getInstance("eba-bank-test-workflow"));
+  const keriaInstance = await TestKeria.getInstance(TEST_CONTEXTS.EBA_TEST)
+  env = TestEnvironment.getInstance("eba_bank_test", keriaInstance);
 
   await downloadConfigWorkflowReports(bankName, false, false, false, refresh);
   // await generateBankConfig(bankNum);
   configJson = await getConfig(testPaths.testUserConfigFile);
-  configJson['context'] = `eba-verifier-bank-test-workflow`
+  configJson['context'] = TEST_CONTEXTS.EBA_TEST
 
   const workflowPath = path.join(
     testPaths.workflowsDir,

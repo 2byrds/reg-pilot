@@ -1020,7 +1020,7 @@ async function ebaLogin(user: ApiUser, cred: any, credCesr: any) {
   const env = TestEnvironment.getInstance();
   let lheads = new Headers();
   lheads.set("Content-Type", "application/json");
-  lheads.set("uiversion", "1.3.10-484-FINAL-master");
+  lheads.set("uiversion", "1.3.10-509-FINAL-master");
   lheads.set("Accept", "application/json, text/plain, */*");
   lheads.set("Connection", "close"); // avoids debugging fetch failures
   let lbody = {
@@ -1030,6 +1030,8 @@ async function ebaLogin(user: ApiUser, cred: any, credCesr: any) {
     },
     sessionId: "78a55420-a074-4ba3-85f9-11aa343995a0",
   };
+  const body = JSON.stringify(lbody);
+  console.log(`eba login body: ${body}`);
   let base64Payload = Buffer.from(JSON.stringify(lbody)).toString("base64");
   let lreq = {
     headers: lheads,
