@@ -98,6 +98,8 @@ const clean = args[ARG_CLEAN] === "false";
 testPaths = TestPaths.getInstance(bankName);
 const BASE_PORT = parseInt(args[ARG_KERIA_START_PORT], 10) || 20000;
 
+const keriaInstanceNames: string[] = [];
+
 // set test data for workflow
 testPaths.testUserName = bankName;
 testPaths.testUserNum = bankNum;
@@ -134,12 +136,14 @@ beforeAll(async () => {
       // Initialize all Keria instances upfront
       await Promise.all(
         Object.values(TEST_CONTEXTS).map(async (contextId, index) => {
+          const keriaInstanceName = `${contextId}-${bankName}`;
           try {
             console.log(
-              `Initializing Keria instance for context: ${contextId}`
+              `Initializing Keria instance for context: ${keriaInstanceName}`
             );
+
             const keriaInstance = await TestKeria.getInstance(
-              contextId,
+              keriaInstanceName,
               testPaths,
               args[ARG_KERIA_DOMAIN],
               args[ARG_KERIA_HOST],
@@ -149,13 +153,13 @@ beforeAll(async () => {
               `ronakseth96/keria:TestBank_${bankNum}`,
               'linux/arm64',
             );
-
+            keriaInstanceNames.push(keriaInstanceName);
             console.log(
-              `Successfully initialized Keria instance for context: ${contextId}`
+              `Successfully initialized Keria instance for context: ${keriaInstanceName}`
             );
           } catch (error) {
             console.error(
-              `Failed to initialize Keria instance for context ${contextId}:`,
+              `Failed to initialize Keria instance for context ${keriaInstanceName}:`,
               error
             );
             throw error;
@@ -171,7 +175,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   console.log('Running run-workflow test cleanup...');
-  await TestKeria.cleanupInstances(Object.values(TEST_CONTEXTS));
+  await TestKeria.cleanupInstances(keriaInstanceNames);
   // if (TestKeria.instances.size <= 0) {
   //   await stopDockerCompose(testPaths.dockerComposeFile);
   // }
@@ -214,7 +218,7 @@ test("eba-verifier-prep-only", async function run() {
 
 test("eba-bank-test-workflow", async function run() {
   console.log(`Running eba-verifier-bank-test-workflow for bank: ${bankName}`);
-  const keriaInstance = await TestKeria.getInstance(TEST_CONTEXTS.EBA_TEST)
+  const keriaInstance = await TestKeria.getInstance(`${TEST_CONTEXTS.EBA_TEST}-${bankName}`)
   env = TestEnvironment.getInstance("eba_bank_test", keriaInstance);
 
   await downloadConfigWorkflowReports(bankName, false, false, false, refresh);
