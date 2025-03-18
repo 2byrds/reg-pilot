@@ -5,22 +5,8 @@ import AdmZip from "adm-zip";
 import * as fsExtra from "fs-extra";
 import { generateFileDigest } from "./generate-digest";
 import signify, { Signer } from "signify-ts";
-import { TestPaths } from "./resolve-env";
 import { unknownPrefix } from "../constants";
-// import { generateFileDigest } from "./utils/generate-digest";
-// import { Aid, getOrCreateClients } from "./utils/test-util";
-// import signify, { HabState, Signer, SignifyClient } from "signify-ts";
-// import { resolveEnvironment, TestEnvironment } from "./utils/resolve-env";
-// import {
-//   buildAidData,
-//   buildUserData,
-//   getConfig,
-// } from "vlei-verifier-workflows";
-
-// import { unknownPrefix } from "../src/constants";
-// import { sign } from "crypto";
-// import { boolean, re } from "mathjs";
-// import { getReportGenTestData } from "./utils/test-data";
+import { TestPaths } from "vlei-verifier-workflows";
 
 export const EXTERNAL_MAN_TYPE = "external_manifest";
 export const SIMPLE_TYPE = "simple";
@@ -40,53 +26,6 @@ function deleteReportsDir(repDir: string): void {
     // console.log("Directory temp_reports does not exist.", dirPath);
   }
 }
-
-// This test assumes you have run a vlei-issuance test that sets up the glief, qvi, le, and
-// role identifiers and Credentials.
-// if (require.main === module) {
-//   test("report-generation-test", async function run() {
-//     env = resolveEnvironment();
-//     const configFileName = env.configuration;
-//     let dirPath = "../src/config/";
-//     const configFilePath = path.join(__dirname, dirPath) + configFileName;
-//     const configJson = await getConfig(configFilePath);
-//     let users = await buildUserData(configJson);
-//     users = users.filter((user) => user.type === "ECR");
-//     for (const user of users) {
-//       const testData = getReportGenTestData();
-//       const clients = await getOrCreateClients(
-//         1,
-//         [user.identifiers[0].agent.secret],
-//         true,
-//       );
-//       const roleClient = clients[0];
-//       const ecrAid = await roleClient
-//         .identifiers()
-//         .get(user.identifiers[0].name);
-//       const keeper = roleClient.manager!.get(ecrAid);
-//       const failDirPrefixed = path.join(
-//         __dirname,
-//         "data",
-//         testData["failDir"],
-//         ecrAid.prefix,
-//       );
-//       const signedDirPrefixed = path.join(
-//         __dirname,
-//         "data",
-//         testData["signedDir"],
-//         ecrAid.prefix,
-//       );
-//       await generate_reports(
-//         ecrAid,
-//         keeper,
-//         signedDirPrefixed,
-//         failDirPrefixed,
-//         testData["unsignedReports"],
-//         testData["reportTypes"],
-//       );
-//     }
-//   }, 100000);
-// }
 
 export async function generate_reports(
   ecrAid: string,

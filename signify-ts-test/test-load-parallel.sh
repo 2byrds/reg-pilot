@@ -441,10 +441,10 @@ run_api_test() {
         if [[ "$STAGE_MODE" == true ]]; then
             TEST_NAME="eba-verifier-prep-only"
         else
-            TEST_NAME="eba-verifier-bank-test-workflow"
+            TEST_NAME="eba-bank-test-workflow"
         fi
     else
-        TEST_NAME="api-verifier-bank-test-workflow"
+        TEST_NAME="reg-api-bank-test-workflow"
     fi
     START_TIME=$(date +%s)
 

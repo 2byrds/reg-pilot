@@ -1,5 +1,4 @@
 import { Saider } from "signify-ts";
-import { TestEnvironment } from "./utils/resolve-env";
 
 export const QVI_SCHEMA_SAID = "EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao";
 export const LE_SCHEMA_SAID = "ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY";

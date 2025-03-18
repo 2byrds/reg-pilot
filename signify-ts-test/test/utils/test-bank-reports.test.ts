@@ -1,6 +1,6 @@
 import fs from "fs";
 import { createZipWithCopies } from "../../src/utils/bank-reports";
-import { TestPaths } from "../../src/utils/resolve-env";
+import { TestPaths } from "vlei-verifier-workflows";
 
 describe("test bank reports testing", () => {
   test("generate dynamic eba zip for signature", async () => {

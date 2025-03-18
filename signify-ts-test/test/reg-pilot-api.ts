@@ -2,20 +2,21 @@ import { strict as assert } from "assert";
 import fs from "fs";
 import * as process from "process";
 import path from "path";
-import { HabState, Keeper, SignifyClient } from "signify-ts";
+import { HabState, SignifyClient } from "signify-ts";
 import { ApiAdapter } from "../src/api-adapter";
 import { generateFileDigest } from "../src/utils/generate-digest";
-import { TestEnvironment, TestPaths } from "../src/utils/resolve-env";
+import { TestEnvironmentRegPilot } from "../src/utils/resolve-env";
 import { ApiUser, isEbaDataSubmitter } from "../src/utils/test-data";
-import { sleep } from "../src/utils/test-util";
 import jwt from "jsonwebtoken";
+import { resolveEnvironment, TestPaths } from "vlei-verifier-workflows";
+import { sleep } from "vlei-verifier-workflows/dist/utils/test-util";
 
 const failDir = "fail_reports";
 let failDirPrefixed: string;
 const signedDir = "signed_reports";
 const secretsJsonPath = "../src/config/";
 
-let env: TestEnvironment;
+let env: TestEnvironmentRegPilot;
 let apiAdapter: ApiAdapter;
 
 afterEach(async () => {});
@@ -45,24 +46,31 @@ beforeAll(async () => {});
 // role identifiers and Credentials.
 // It also assumes you have generated the different report files
 // from the report test
-export async function run_api_test(apiUsers: ApiUser[], fast = true) {
-  if (apiUsers.length == 3) await multi_user_test(apiUsers);
-  else if (apiUsers.length == 1) await single_user_test(apiUsers[0], fast);
+export async function run_api_test(
+  env: TestEnvironmentRegPilot,
+  apiUsers: ApiUser[],
+  fast = true,
+) {
+  if (apiUsers.length == 3) await multi_user_test(env, apiUsers);
+  else if (apiUsers.length == 1) await single_user_test(env, apiUsers[0], fast);
   else
     console.log(
       `Invalid ecr AID count. Expected 1 or 3, got ${apiUsers.length}`,
     );
 }
 
-export async function run_api_test_no_delegation(apiUsers: ApiUser[]) {
-  await api_test_no_delegation(apiUsers);
+export async function run_api_test_no_delegation(
+  env: TestEnvironmentRegPilot,
+  apiUsers: ApiUser[],
+) {
+  await api_test_no_delegation(env, apiUsers);
 }
 
 export async function run_api_admin_test(
   apiUsers: ApiUser[],
   adminUser: ApiUser,
 ) {
-  await admin_test(apiUsers, adminUser);
+  await admin_test(env, apiUsers, adminUser);
 }
 
 export async function run_api_revocation_test(
@@ -76,11 +84,15 @@ export async function run_api_revocation_test(
     requestorAidAlias,
     requestorAidPrefix,
     requestorClient,
+    env,
   );
 }
 
-export async function run_eba_api_test(apiUsers: ApiUser[]) {
-  await single_user_eba_test(apiUsers[0]);
+export async function run_eba_api_test(
+  env: TestEnvironmentRegPilot,
+  apiUsers: ApiUser[],
+) {
+  await single_user_eba_test(env, apiUsers[0]);
 }
 
 module.exports = {
@@ -92,9 +104,12 @@ module.exports = {
   single_user_eba_test,
 };
 
-async function single_user_test(user: ApiUser, fast = false) {
+async function single_user_test(
+  env: TestEnvironmentRegPilot,
+  user: ApiUser,
+  fast = false,
+) {
   const testPaths = TestPaths.getInstance();
-  const env = TestEnvironment.getInstance();
   const apiAdapter = new ApiAdapter(env.apiBaseUrl, env.filerBaseUrl);
 
   failDirPrefixed = path.join(testPaths.testFailReports, user.ecrAid.prefix);
@@ -131,6 +146,7 @@ async function single_user_test(user: ApiUser, fast = false) {
       }
 
       const lresp = await login(
+        env,
         user,
         user.creds[i]["cred"],
         user.creds[i]["credCesr"],
@@ -144,10 +160,10 @@ async function single_user_test(user: ApiUser, fast = false) {
     }
   }
   if (ecrUser) {
-    const lresp = await login(ecrUser, ecrCred, ecrCredCesr);
+    const lresp = await login(env, ecrUser, ecrCred, ecrCredCesr);
     if (lresp.status) {
       sleep(1000);
-      await checkLogin(ecrUser, ecrCred, false);
+      await checkLogin(env, ecrUser, ecrCred, false);
     } else {
       fail("Failed to login");
     }
@@ -208,6 +224,7 @@ async function single_user_test(user: ApiUser, fast = false) {
         path.basename(signedReport),
         signedZipDig,
         user,
+        env,
       );
       if (fast) break;
     }
@@ -300,9 +317,11 @@ async function single_user_test(user: ApiUser, fast = false) {
 
 // Specail test for eba api
 // TODO create multisig test
-export async function single_user_eba_test(user: ApiUser) {
+export async function single_user_eba_test(
+  env: TestEnvironmentRegPilot,
+  user: ApiUser,
+) {
   const testPaths = TestPaths.getInstance();
-  const env = TestEnvironment.getInstance();
 
   const apiAdapter = new ApiAdapter(env.apiBaseUrl, env.filerBaseUrl);
 
@@ -325,6 +344,7 @@ export async function single_user_eba_test(user: ApiUser) {
       }
 
       const token = await ebaLogin(
+        env,
         user,
         user.creds[i]["cred"],
         user.creds[i]["credCesr"],
@@ -354,7 +374,6 @@ export async function single_user_eba_test(user: ApiUser) {
           await fs.promises.readFile(signedReport),
           user.roleClient,
           token,
-          env,
         );
         console.log("EBA upload response", signedUpResp);
         assert.equal(signedUpResp.status, 200);
@@ -365,12 +384,14 @@ export async function single_user_eba_test(user: ApiUser) {
   }
 }
 
-async function multi_user_test(apiUsers: Array<ApiUser>) {
+async function multi_user_test(
+  env: TestEnvironmentRegPilot,
+  apiUsers: Array<ApiUser>,
+) {
   let user1: ApiUser;
   let user2: ApiUser;
   let user3: ApiUser;
 
-  const env = TestEnvironment.getInstance();
   const apiAdapter = new ApiAdapter(env.apiBaseUrl, env.filerBaseUrl);
 
   assert.equal(apiUsers.length, 3);
@@ -414,7 +435,7 @@ async function multi_user_test(apiUsers: Array<ApiUser>) {
     let ecrLei;
     let ecrCredCesr;
     for (let i = 0; i < user.creds.length; i++) {
-      await login(user, user.creds[i]["cred"], user.creds[i]["credCesr"]);
+      await login(env, user, user.creds[i]["cred"], user.creds[i]["credCesr"]);
       const foundEcr = isEbaDataSubmitter(
         user.creds[i]["cred"],
         user.ecrAid.prefix,
@@ -425,7 +446,7 @@ async function multi_user_test(apiUsers: Array<ApiUser>) {
         ecrCredCesr = user.creds[i]["credCesr"];
       }
 
-      await checkLogin(user, user.creds[i]["cred"], false);
+      await checkLogin(env, user, user.creds[i]["cred"], false);
     }
 
     // try to get status without signed headers provided
@@ -485,6 +506,7 @@ async function multi_user_test(apiUsers: Array<ApiUser>) {
           path.basename(signedReport),
           signedZipDig,
           user,
+          env,
         );
         user.uploadDig = signedZipDig;
         break;
@@ -536,8 +558,11 @@ async function multi_user_test(apiUsers: Array<ApiUser>) {
   sbody = await sresp.json();
 }
 
-async function admin_test(apiUsers: Array<ApiUser>, adminUser: ApiUser) {
-  const env = TestEnvironment.getInstance();
+async function admin_test(
+  env: TestEnvironmentRegPilot,
+  apiUsers: Array<ApiUser>,
+  adminUser: ApiUser,
+) {
   const apiAdapter = new ApiAdapter(env.apiBaseUrl, env.filerBaseUrl);
 
   for (const user of apiUsers) {
@@ -566,7 +591,7 @@ async function admin_test(apiUsers: Array<ApiUser>, adminUser: ApiUser) {
     let ecrLei;
     let ecrCredCesr;
     for (let i = 0; i < user.creds.length; i++) {
-      await login(user, user.creds[i]["cred"], user.creds[i]["credCesr"]);
+      await login(env, user, user.creds[i]["cred"], user.creds[i]["credCesr"]);
       const foundEcr = isEbaDataSubmitter(
         user.creds[i]["cred"],
         user.ecrAid.prefix,
@@ -577,7 +602,7 @@ async function admin_test(apiUsers: Array<ApiUser>, adminUser: ApiUser) {
         ecrCredCesr = user.creds[i]["credCesr"];
       }
 
-      await checkLogin(user, user.creds[i]["cred"], false);
+      await checkLogin(env, user, user.creds[i]["cred"], false);
     }
 
     // try to get status without signed headers provided
@@ -636,6 +661,7 @@ async function admin_test(apiUsers: Array<ApiUser>, adminUser: ApiUser) {
           path.basename(signedReport),
           signedZipDig,
           user,
+          env,
         );
         user.uploadDig = signedZipDig;
         break;
@@ -643,6 +669,7 @@ async function admin_test(apiUsers: Array<ApiUser>, adminUser: ApiUser) {
     }
   }
   await login(
+    env,
     adminUser,
     adminUser.creds[0]["cred"],
     adminUser.creds[0]["credCesr"],
@@ -656,8 +683,10 @@ async function admin_test(apiUsers: Array<ApiUser>, adminUser: ApiUser) {
   let sbody = await sresp.json();
 }
 
-async function api_test_no_delegation(apiUsers: Array<ApiUser>) {
-  const env = TestEnvironment.getInstance();
+async function api_test_no_delegation(
+  env: TestEnvironmentRegPilot,
+  apiUsers: Array<ApiUser>,
+) {
   for (const user of apiUsers) {
     // try to ping the api
     let ppath = "/ping";
@@ -668,8 +697,8 @@ async function api_test_no_delegation(apiUsers: Array<ApiUser>) {
 
     // login with the ecr credential
     for (let i = 0; i < user.creds.length; i++) {
-      await login(user, user.creds[i]["cred"], user.creds[i]["credCesr"]);
-      await checkLogin(user, user.creds[i]["cred"], false, true);
+      await login(env, user, user.creds[i]["cred"], user.creds[i]["credCesr"]);
+      await checkLogin(env, user, user.creds[i]["cred"], false, true);
     }
   }
 }
@@ -679,8 +708,8 @@ async function revoked_cred_upload_test(
   requestorAidAlias: string,
   requestorAidPrefix: string,
   requestorClient: SignifyClient,
+  env: TestEnvironmentRegPilot,
 ) {
-  const env = TestEnvironment.getInstance();
   const apiAdapter = new ApiAdapter(env.apiBaseUrl, env.filerBaseUrl);
 
   const ecr_cred_prev_state = credentials.get("ecr_cred_prev_state")!;
@@ -703,11 +732,13 @@ async function revoked_cred_upload_test(
   // 1st case. Presenting non revoked credential
   // TODO: update login with new /revoke_credential endpoint call
   await login(
+    env,
     ecr_cred_prev_state,
     ecr_cred_prev_state.creds[0]["cred"],
     ecr_cred_prev_state.creds[0]["credCesr"],
   );
   await checkLogin(
+    env,
     ecr_cred_prev_state,
     ecr_cred_prev_state.creds[0]["cred"],
     false,
@@ -749,6 +780,7 @@ async function revoked_cred_upload_test(
       path.basename(signedReport),
       signedZipDig,
       ecr_cred_prev_state,
+      env,
     );
     ecr_cred_prev_state.uploadDig = signedZipDig;
   }
@@ -771,15 +803,22 @@ async function revoked_cred_upload_test(
     ecr_cred_revoke.creds[0]["cred"],
     ecr_cred_revoke.creds[0]["credCesr"],
   );
-  await checkLogin(ecr_cred_revoke, ecr_cred_revoke.creds[0]["cred"], true);
+  await checkLogin(
+    env,
+    ecr_cred_revoke,
+    ecr_cred_revoke.creds[0]["cred"],
+    true,
+  );
 
   // 3rd case. Logging in using previous state(non-revoked) of the credential(which was revoked)
   await login(
+    env,
     ecr_cred_prev_state,
     ecr_cred_prev_state.creds[0]["cred"],
     ecr_cred_revoke.creds[0]["credCesr"],
   );
   await checkLogin(
+    env,
     ecr_cred_prev_state,
     ecr_cred_prev_state.creds[0]["cred"],
     true,
@@ -787,11 +826,13 @@ async function revoked_cred_upload_test(
 
   // 4th case. Presenting new ECR credentail with new SAID
   await login(
+    env,
     ecr_cred_new_state,
     ecr_cred_new_state.creds[0]["cred"],
     ecr_cred_new_state.creds[0]["credCesr"],
   );
   await checkLogin(
+    env,
     ecr_cred_new_state,
     ecr_cred_new_state.creds[0]["cred"],
     false,
@@ -803,8 +844,8 @@ export async function checkSignedUpload(
   fileName: string,
   signedZipDig: string,
   user: ApiUser,
+  env: TestEnvironmentRegPilot,
 ): Promise<boolean> {
-  const env = TestEnvironment.getInstance();
   const apiAdapter = new ApiAdapter(env.apiBaseUrl, env.filerBaseUrl);
 
   assert.equal(signedUpResp.status, 200);
@@ -860,8 +901,8 @@ export async function checkFailUpload(
   fileName: string,
   failZipDig: string,
   ecrAid: HabState,
+  env: TestEnvironmentRegPilot,
 ): Promise<boolean> {
-  const env = TestEnvironment.getInstance();
   const apiAdapter = new ApiAdapter(env.apiBaseUrl, env.filerBaseUrl);
 
   let failMessage = "";
@@ -931,12 +972,12 @@ export function getSignedReports(
 }
 
 async function checkLogin(
+  env: TestEnvironmentRegPilot,
   user: ApiUser,
   cred: any,
   credRevoked: boolean = false,
   noDelegation: boolean = false,
 ) {
-  const env = TestEnvironment.getInstance();
   let heads = new Headers();
   heads.set("Content-Type", "application/json");
   const client: SignifyClient = user.roleClient;
@@ -981,8 +1022,12 @@ async function checkLogin(
   return cresp;
 }
 
-async function login(user: ApiUser, cred: any, credCesr: any) {
-  const env = TestEnvironment.getInstance();
+async function login(
+  env: TestEnvironmentRegPilot,
+  user: ApiUser,
+  cred: any,
+  credCesr: any,
+) {
   let heads = new Headers();
   heads.set("Content-Type", "application/json");
   heads.set("Connection", "close"); // avoids debugging fetch failures
@@ -1016,8 +1061,12 @@ async function login(user: ApiUser, cred: any, credCesr: any) {
   return lresp;
 }
 
-async function ebaLogin(user: ApiUser, cred: any, credCesr: any) {
-  const env = TestEnvironment.getInstance();
+async function ebaLogin(
+  env: TestEnvironmentRegPilot,
+  user: ApiUser,
+  cred: any,
+  credCesr: any,
+) {
   let lheads = new Headers();
   lheads.set("Content-Type", "application/json");
   lheads.set("uiversion", "1.3.10-509-FINAL-master");
@@ -1059,7 +1108,7 @@ async function presentRevocation(
   cred: any,
   credCesr: any,
 ) {
-  const env = TestEnvironment.getInstance();
+  const env = resolveEnvironment<TestEnvironmentRegPilot>();
   let heads = new Headers();
   heads.set("Content-Type", "application/json");
   heads.set("Connection", "close"); // avoids debugging fetch failures

@@ -1,9 +1,6 @@
 import { SignifyClient } from "signify-ts";
 import FormData from "form-data";
-import { getOrCreateClients } from "./utils/test-util";
 import path from "path";
-import { TestEnvironment } from "./utils/resolve-env";
-import { convertDockerHost } from "./utils/test-host";
 
 export class ApiAdapter {
   apiBaseUrl: string;
@@ -131,12 +128,7 @@ export class ApiAdapter {
     zipBuffer: Buffer,
     client: SignifyClient,
     token: string,
-    envOverride?: TestEnvironment,
   ): Promise<Response> {
-    if (envOverride) {
-      this.apiBaseUrl = envOverride.apiBaseUrl;
-      this.filerBaseUrl = envOverride.filerBaseUrl;
-    }
     let formData = new FormData();
     let ctype = "application/zip";
     console.log(
@@ -197,139 +189,5 @@ export class ApiAdapter {
       } ms: ${resp.status}`,
     );
     return resp;
-  }
-
-  public async addRootOfTrust(
-    configJson: any,
-    keriaHttpPort?: number,
-  ): Promise<Response> {
-    if (this.hasGLEIFWithMultisig(configJson)) {
-      return await this.addRootOfTrustMultisig(configJson);
-    } else {
-      return await this.addRootOfTrustSinglesig(configJson, keriaHttpPort);
-    }
-  }
-
-  public async addRootOfTrustMultisig(configJson: any): Promise<Response> {
-    const rootOfTrustMultisigIdentifierName = configJson.users
-      .filter(
-        (usr: any) => usr.type == "GLEIF" || usr.type == "GLEIF_EXTERNAL",
-      )[0]
-      .identifiers.filter((identifier: string) =>
-        identifier.includes("multisig"),
-      )![0];
-
-    const rootOfTrustIdentifierName = configJson.users
-      .filter(
-        (usr: any) => usr.type == "GLEIF" || usr.type == "GLEIF_EXTERNAL",
-      )[0]
-      .identifiers.filter(
-        (identifier: string) => !identifier.includes("multisig"),
-      )![0];
-
-    const rootOfTrustIdentifierAgent =
-      configJson.agents[
-        configJson.identifiers[rootOfTrustIdentifierName].agent
-      ];
-    const rootOfTrustIdentifierSecret =
-      configJson.secrets[rootOfTrustIdentifierAgent.secret];
-    const clients = await getOrCreateClients(
-      1,
-      [rootOfTrustIdentifierSecret],
-      true,
-    );
-    const client = clients[clients.length - 1];
-    const rootOfTrustAid = await client
-      .identifiers()
-      .get(rootOfTrustMultisigIdentifierName);
-
-    const oobi = await client
-      .oobis()
-      .get(rootOfTrustMultisigIdentifierName, "agent");
-    let oobiUrl = oobi.oobis[0];
-    console.log(`Root of trust OOBI: ${oobiUrl}`);
-    const url = new URL(oobiUrl);
-    if (url.hostname === "keria")
-      oobiUrl = oobiUrl.replace("keria", "localhost");
-    console.log(`Root of trust OOBI: ${oobiUrl}`);
-    const oobiResp = await fetch(oobiUrl);
-    const oobiRespBody = await oobiResp.text();
-    const heads = new Headers();
-    heads.set("Content-Type", "application/json");
-    let lbody = {
-      vlei: oobiRespBody,
-      aid: rootOfTrustAid.prefix,
-      oobi: oobiUrl,
-    };
-    let lreq = {
-      headers: heads,
-      method: "POST",
-      body: JSON.stringify(lbody),
-    };
-    const lurl = `${this.apiBaseUrl}/add_root_of_trust`;
-    const lresp = await fetch(lurl, lreq);
-    return lresp;
-  }
-
-  public async addRootOfTrustSinglesig(
-    configJson: any,
-    keriaHttpPort?: number,
-  ): Promise<Response> {
-    const rootOfTrustIdentifierName = configJson.users.filter(
-      (usr: any) => usr.type == "GLEIF",
-    )[0].identifiers[0];
-    const rootOfTrustIdentifierAgent =
-      configJson.agents[
-        configJson.identifiers[rootOfTrustIdentifierName].agent
-      ];
-    const rootOfTrustIdentifierSecret =
-      configJson.secrets[rootOfTrustIdentifierAgent.secret];
-    const clients = await getOrCreateClients(
-      1,
-      [rootOfTrustIdentifierSecret],
-      true,
-    );
-
-    const client = clients[clients.length - 1];
-    const rootOfTrustAid = await client
-      .identifiers()
-      .get(rootOfTrustIdentifierName);
-
-    const oobi = await client.oobis().get(rootOfTrustIdentifierName);
-    let oobiUrl = oobi.oobis[0];
-    console.log(`Root of trust OOBI: ${oobiUrl}`);
-    const url = new URL(oobiUrl);
-    // if (url.hostname === "keria")
-    // oobiUrl = oobiUrl.replace("keria", "localhost");
-    // console.log(`OobiUrl: ${oobiUrl}`);
-    console.log(`Original OobiUrl ${oobiUrl}`);
-    if (url.hostname === "keria") {
-      oobiUrl = convertDockerHost(oobiUrl, "keria");
-    }
-    if (keriaHttpPort) {
-      oobiUrl = oobiUrl.replace("3902", keriaHttpPort.toString());
-      console.log(`Replaced OobiUrl port ${url.port}: ${oobiUrl}`);
-    }
-    console.log(`Fetcching OobiUrl: ${oobiUrl}`);
-    const oobiResp = await fetch(oobiUrl);
-    const oobiRespBody = await oobiResp.text();
-    const heads = new Headers();
-    heads.set("Content-Type", "application/json");
-    heads.set("Connection", "close"); // avoids debugging fetch failures
-    let lbody = {
-      vlei: oobiRespBody,
-      aid: rootOfTrustAid.prefix,
-      oobi: oobiUrl,
-    };
-    let lreq = {
-      headers: heads,
-      method: "POST",
-      body: JSON.stringify(lbody),
-    };
-    const lurl = `${this.apiBaseUrl}/add_root_of_trust`;
-    console.log("Adding test Root of trust URL: ", lurl);
-    console.log("Adding test Root of trust Req: ", lreq);
-    const lresp = await fetch(lurl, lreq);
-    return lresp;
   }
 }

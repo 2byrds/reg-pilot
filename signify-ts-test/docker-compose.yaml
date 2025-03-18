@@ -40,7 +40,7 @@ services:
     image: ${KERIA_IMAGE:-weboftrust/keria}:${KERIA_IMAGE_TAG:-latest}
     environment:
       - KERI_AGENT_CORS=1
-      - KERI_URL=http://keria:3902
+      - KERI_URL=http://localhost:3902
       - PYTHONUNBUFFERED=1
       - PYTHONIOENCODING=UTF-8
     volumes:
@@ -57,7 +57,7 @@ services:
         "agent",
       ]
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://keria:3902/spec.yaml"]
+      test: ["CMD", "wget", "--spider", "http://localhost:3902/spec.yaml"]
       interval: 2s
       timeout: 3s
       retries: 5
@@ -91,11 +91,11 @@ services:
       - 8000:8000
     environment:
       - ENABLE_CORS=true
-      - VLEI_VERIFIER=http://vlei-verifier:7676
-      - FILER_REPORTS=http://reg-pilot-filer:7878/reports/
-      - FILER_ADMIN_UPLOAD_STATUSES=http://reg-pilot-filer:7878/admin/upload_statuses/
+      - VLEI_VERIFIER=http://localhost:7676
+      - FILER_REPORTS=http://localhost:7878/reports/
+      - FILER_ADMIN_UPLOAD_STATUSES=http://localhost:7878/admin/upload_statuses/
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://reg-pilot-api:8000/ping"]
+      test: ["CMD", "wget", "--spider", "http://localhost:8000/ping"]
       interval: 2s
       timeout: 3s
       retries: 5
@@ -113,7 +113,7 @@ services:
     ports:
       - 7676:7676
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://vlei-verifier:7676/health"]
+      test: ["CMD", "wget", "--spider", "http://localhost:7676/health"]
       interval: 2s
       timeout: 3s
       retries: 5
@@ -126,9 +126,9 @@ services:
     ports:
       - 7878:7878
     environment:
-      - VLEI_VERIFIER=http://vlei-verifier:7676
+      - VLEI_VERIFIER=http://localhost:7676
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://reg-pilot-filer:7878/health"]
+      test: ["CMD", "wget", "--spider", "http://localhost:7878/health"]
       interval: 2s
       timeout: 3s
       retries: 5

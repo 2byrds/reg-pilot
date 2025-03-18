@@ -1,12 +1,13 @@
 import { strict as assert } from "assert";
-import { TestEnvironment } from "../src/utils/resolve-env";
+import { TestEnvironmentRegPilot } from "../src/utils/resolve-env";
 import { ApiUser, isEbaDataSubmitter } from "../src/utils/test-data";
 import { ApiAdapter } from "../src/api-adapter";
+import { resolveEnvironment } from "vlei-verifier-workflows";
 
 const secretsJsonPath = "../src/config/";
 const ECR_SCHEMA_SAID = "EEy9PkikFcANV1l7EHukCeXqrzT1hNZjGlUk7wuMO5jw";
 
-let env: TestEnvironment;
+let env: TestEnvironmentRegPilot;
 let apiAdapter: ApiAdapter;
 
 // afterEach(async () => {});
@@ -38,13 +39,13 @@ let apiAdapter: ApiAdapter;
 //   }, 100000);
 // }
 export async function run_vlei_verification_test(
+  env: TestEnvironmentRegPilot,
   users: ApiUser[],
   configJson: any,
 ) {
-  env = TestEnvironment.getInstance();
   apiAdapter = new ApiAdapter(env.apiBaseUrl, env.filerBaseUrl);
 
-  await apiAdapter.addRootOfTrust(configJson, env.testKeria.keriaHttpPort);
+  //make sure to add the root of trust
   for (const user of users) {
     await vlei_verification(user, env);
   }
@@ -52,7 +53,10 @@ export async function run_vlei_verification_test(
 
 module.exports = { run_vlei_verification_test };
 
-export async function vlei_verification(user: ApiUser, env: TestEnvironment) {
+export async function vlei_verification(
+  user: ApiUser,
+  env: TestEnvironmentRegPilot,
+) {
   try {
     let hpath = "/health";
     let hreq = { method: "GET", body: null };

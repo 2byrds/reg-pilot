@@ -1,10 +1,14 @@
 import path from "path";
 import fs from "fs";
-import { TestEnvironment, TestPaths } from "./resolve-env";
-import { getOrCreateClients } from "./test-util";
 import { ECR_SCHEMA_SAID } from "../constants";
 import { SignifyClient } from "signify-ts";
-import { buildAidData } from "vlei-verifier-workflows/dist/utils/handle-json-config";
+import { TestEnvironmentRegPilot } from "./resolve-env";
+import {
+  buildAidData,
+  getOrCreateClients,
+  TestKeria,
+  TestPaths,
+} from "vlei-verifier-workflows";
 
 export const EXTERNAL_MAN_TYPE = "external_manifest";
 export const SIMPLE_TYPE = "simple";
@@ -20,7 +24,7 @@ export function getConfig(configFilePath: string) {
 
 export async function getApiTestData(
   configJson: any,
-  env: TestEnvironment,
+  env: TestEnvironmentRegPilot,
   aids: string[],
 ) {
   let apiUsers: Array<ApiUser> = [];
@@ -32,7 +36,8 @@ export async function getApiTestData(
     } else {
       secret = aidData[aid].agent.secret;
     }
-    const clients = await getOrCreateClients(1, [secret], true);
+    const testKeria = await TestKeria.getInstance(configJson["context"]);
+    const clients = await getOrCreateClients(testKeria, 1, [secret], true);
     const roleClient = clients[clients.length - 1];
     let apiUser: ApiUser = {
       ecrAid: null,

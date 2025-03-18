@@ -14,7 +14,7 @@ services:
         limits:
           memory: 4G
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 512M
     healthcheck:
       test: ["CMD", "wget", "--spider", "http://localhost:8000/ping"]
@@ -23,7 +23,7 @@ services:
       retries: 5
       start_period: 2s
     extra_hosts:
-      - 'localhost:127.0.0.1'
+      - "localhost:127.0.0.1"
 
   verify:
     image: alpine

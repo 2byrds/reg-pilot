@@ -1,10 +1,6 @@
 import minimist from "minimist";
 import path, { parse } from "path";
 import {
-  TestEnvironment,
-  TestPaths,
-} from "../src/utils/resolve-env";
-import {
   ARG_KERIA_HOST,
   ARG_KERIA_DOMAIN,
   ARG_WITNESS_HOST,
@@ -13,7 +9,10 @@ import {
   listPackagedWorkflows,
   loadPackagedWorkflow,
   loadWorkflow,
+  resolveEnvironment,
   startDockerServices,
+  TestEnvironment,
+  TestPaths,
 } from "vlei-verifier-workflows";
 
 import { SIMPLE_TYPE } from "../src/utils/test-data";
@@ -27,22 +26,26 @@ import {
 } from "./utils/workflow-step-runners";
 import assert from "assert";
 import { TestKeria } from "vlei-verifier-workflows/dist/utils/test-keria";
+import { TestEnvironmentRegPilot } from "../src/utils/resolve-env";
+import { EnvironmentRegistry } from "vlei-verifier-workflows";
 
 // List all available workflows
 const availableWorkflows = listPackagedWorkflows();
-console.log('Available workflows:', availableWorkflows);
+console.log("Available workflows:", availableWorkflows);
 
 let testPaths: TestPaths;
-let env: TestEnvironment;
 let configJson: any;
 
 console.log(`run-workflow-bank process.argv array: ${process.argv}`);
 
+const API_TEST_NAME = "reg-api-bank-test-workflow";
+const EBA_TEST_NAME = "eba-bank-test-workflow";
+const ISSUANCE_TEST_NAME = "issuance-bank-test-workflow";
 // Test context constants - use these for test names, configJson['context'], and keria instance IDs
 const TEST_CONTEXTS = {
-  // API_TEST: "reg-api-bank-test-workflow",
-  EBA_TEST: "eba-bank-test-workflow",
-  // ISSUANCE_TEST: "issuance-bank-test-workflow",
+  API_TEST: API_TEST_NAME,
+  EBA_TEST: EBA_TEST_NAME,
+  ISSUANCE_TEST: ISSUANCE_TEST_NAME,
 };
 
 // Access named arguments
@@ -67,9 +70,9 @@ const args = minimist(process.argv.slice(process.argv.indexOf("--") + 1), {
     [ARG_REFRESH]: false,
     [ARG_CLEAN]: true,
     [ARG_KERIA_START_PORT]: 20000, //TODO once prepareClient in vlei-verifiers-workflow is updated, this could be 20000
-    [ARG_WITNESS_HOST]: 'localhost',
-    [ARG_KERIA_HOST]: 'localhost',
-    [ARG_KERIA_DOMAIN]: 'localhost',
+    [ARG_WITNESS_HOST]: "localhost",
+    [ARG_KERIA_HOST]: "localhost",
+    [ARG_KERIA_DOMAIN]: "localhost",
   },
   "--": true,
   unknown: (arg) => {
@@ -95,7 +98,11 @@ const bankContainer = `${bankName}_keria`.toLowerCase();
 const offset = 10 * (bankNum - 1);
 const refresh = args[ARG_REFRESH] ? args[ARG_REFRESH] === "false" : true;
 const clean = args[ARG_CLEAN] === "false";
-testPaths = TestPaths.getInstance(bankName);
+const dockerComposeFile = path.join(
+  process.cwd(),
+  "docker-compose-banktest.yaml",
+);
+testPaths = TestPaths.getInstance(bankName, dockerComposeFile);
 const BASE_PORT = parseInt(args[ARG_KERIA_START_PORT], 10) || 20000;
 
 const keriaInstanceNames: string[] = [];
@@ -130,20 +137,20 @@ beforeAll(async () => {
     testPaths = TestPaths.getInstance();
 
     const dockerStarted = await startDockerServices(
-      testPaths.dockerComposeFile
+      testPaths.dockerComposeFile,
     );
     if (dockerStarted) {
       // Initialize all Keria instances upfront
       await Promise.all(
         Object.values(TEST_CONTEXTS).map(async (contextId, index) => {
-          const keriaInstanceName = `${contextId}-${bankName}`;
+          const contextName = `${contextId}-${bankName}`;
           try {
             console.log(
-              `Initializing Keria instance for context: ${keriaInstanceName}`
+              `Initializing Keria instance for context: ${contextName}`,
             );
 
             const keriaInstance = await TestKeria.getInstance(
-              keriaInstanceName,
+              contextName,
               testPaths,
               args[ARG_KERIA_DOMAIN],
               args[ARG_KERIA_HOST],
@@ -151,30 +158,30 @@ beforeAll(async () => {
               BASE_PORT,
               bankNum,
               `ronakseth96/keria:TestBank_${bankNum}`,
-              'linux/arm64',
+              "linux/arm64",
             );
-            keriaInstanceNames.push(keriaInstanceName);
+            keriaInstanceNames.push(contextName);
             console.log(
-              `Successfully initialized Keria instance for context: ${keriaInstanceName}`
+              `Successfully initialized Keria instance for context: ${contextName}`,
             );
           } catch (error) {
             console.error(
-              `Failed to initialize Keria instance for context ${keriaInstanceName}:`,
-              error
+              `Failed to initialize Keria instance for context ${contextName}:`,
+              error,
             );
             throw error;
           }
-        })
+        }),
       );
     }
   } catch (error) {
-    console.error('Error in beforeAll:', error);
+    console.error("Error in beforeAll:", error);
     throw error;
   }
 }, 60000);
 
 afterAll(async () => {
-  console.log('Running run-workflow test cleanup...');
+  console.log("Running run-workflow test cleanup...");
   await TestKeria.cleanupInstances(keriaInstanceNames);
   // if (TestKeria.instances.size <= 0) {
   //   await stopDockerCompose(testPaths.dockerComposeFile);
@@ -183,22 +190,42 @@ afterAll(async () => {
 
 test("reg-api-bank-test-workflow", async function run() {
   console.log(`Running api-verifier-bank-test-workflow for bank: ${bankName}`);
-  const keriaInstance = await TestKeria.getInstance("reg-api-bank-test-workflow")
-  env = TestEnvironment.getInstance("docker", keriaInstance);
+  const contextName = `${API_TEST_NAME}-${bankName}`;
+  const keriaInstance = await TestKeria.getInstance(contextName);
 
   await downloadConfigWorkflowReports(bankName, true, false, false, refresh);
   // await generateBankConfig(bankNum);
   configJson = await getConfig(testPaths.testUserConfigFile);
-  configJson['context'] = `api-verifier-bank-test-workflow`
+  configJson["context"] = contextName;
 
   const workflowPath = path.join(
     testPaths.workflowsDir,
     "bank-api-verifier-test-workflow.yaml",
   );
+
+  // Register a custom environment
+  EnvironmentRegistry.getInstance().register<TestEnvironmentRegPilot>(
+    contextName,
+    (overrides: any) => ({
+      preset: contextName,
+      keriaAdminUrl: `https://localhost:20001/admin`,
+      keriaBootUrl: `https://localhost:20003/`,
+      witnessUrls: [],
+      witnessIds: [],
+      vleiServerUrl: "",
+      verifierBaseUrl: "",
+      workflow: workflowPath,
+      configuration: testPaths.testUserConfigFile,
+      apiBaseUrl: `http://localhost:8000`,
+      filerBaseUrl: `http://localhost:7676/reports/`,
+      ...overrides,
+    }),
+  );
+  const env = resolveEnvironment<TestEnvironmentRegPilot>(contextName);
   const workflow = loadWorkflow(workflowPath);
 
   if (workflow && configJson) {
-    const wr = new WorkflowRunner(workflow, configJson, configJson['context']);
+    const wr = new WorkflowRunner(workflow, configJson, configJson["context"]);
     wr.registerRunner("generate_report", new GenerateReportStepRunner());
     wr.registerRunner("api_test", new ApiTestStepRunner());
     wr.registerRunner("sign_report", new SignReportStepRunner());
@@ -216,15 +243,46 @@ test("eba-verifier-prep-only", async function run() {
   configJson = await getConfig(testPaths.testUserConfigFile);
 });
 
-test("eba-bank-test-workflow", async function run() {
+// EBA api regjects test data, so this test is skipped
+// add/remove test.skip to skip/run this test
+test.skip("eba-bank-test-workflow", async function run() {
   console.log(`Running eba-verifier-bank-test-workflow for bank: ${bankName}`);
-  const keriaInstance = await TestKeria.getInstance(`${TEST_CONTEXTS.EBA_TEST}-${bankName}`)
-  env = TestEnvironment.getInstance("eba_bank_test", keriaInstance);
+  const contextName = `${EBA_TEST_NAME}-${bankName}`;
+  const keriaInstance = await TestKeria.getInstance(contextName);
+
+  // Register a custom environment
+  EnvironmentRegistry.getInstance().register<TestEnvironmentRegPilot>(
+    contextName,
+    (overrides: any) => ({
+      preset: contextName,
+      keriaAdminUrl: `https://localhost:20001/admin`,
+      keriaBootUrl: `https://localhost:20003/`,
+      witnessUrls: [
+        "https://witness1.eba-bank.example.com",
+        "https://witness2.eba-bank.example.com",
+      ],
+      witnessIds: [
+        "BNZBr3xjR0Vtat_HxFJnfBwQcpDj3LGl4h_MCQdmyN-r",
+        "BH_XYb3mBmRB1nBVl8XrKjtuQkcIWYKALY4ZWLVOZjKg",
+      ],
+      vleiServerUrl: "https://schemas.eba-bank.example.com",
+      verifierBaseUrl: process.env.VLEI_VERIFIER || "Demo verifier not set",
+      workflow: process.env.WORKFLOW || "",
+      configuration: process.env.CONFIGURATION || "config.json",
+      apiBaseUrl:
+        process.env.REG_PILOT_API ||
+        "https://errp.test.eba.europa.eu/api-security",
+      filerBaseUrl:
+        process.env.REG_PILOT_FILER || "https://errp.test.eba.europa.eu/api",
+      ...overrides,
+    }),
+  );
+  const env = resolveEnvironment<TestEnvironmentRegPilot>(contextName);
 
   await downloadConfigWorkflowReports(bankName, false, false, false, refresh);
   // await generateBankConfig(bankNum);
   configJson = await getConfig(testPaths.testUserConfigFile);
-  configJson['context'] = TEST_CONTEXTS.EBA_TEST
+  configJson["context"] = contextName;
 
   const workflowPath = path.join(
     testPaths.workflowsDir,
@@ -233,7 +291,7 @@ test("eba-bank-test-workflow", async function run() {
   const workflow = loadWorkflow(workflowPath);
 
   if (workflow && configJson) {
-    const wr = new WorkflowRunner(workflow, configJson, configJson['context']);
+    const wr = new WorkflowRunner(workflow, configJson, configJson["context"]);
     wr.registerRunner("generate_report", new GenerateReportStepRunner());
     wr.registerRunner("api_test", new ApiTestStepRunner());
     wr.registerRunner("sign_report", new SignReportStepRunner());
@@ -242,38 +300,40 @@ test("eba-bank-test-workflow", async function run() {
   }
 }, 3600000);
 
-test("vlei-issuance-reports-bank-test-workflow", async function run() {
+test("issuance-bank-test-workflow", async function run() {
   console.log(
     `Running vlei-issuance-reports-bank-test-workflow for bank: ${bankName}`,
   );
   process.env.REPORT_TYPES = SIMPLE_TYPE;
-
-  env = TestEnvironment.getInstance("docker", await TestKeria.getInstance("issuance-bank-test-workflow"));
+  const contextName = `${EBA_TEST_NAME}-${bankName}`;
+  const keriaInstance = await TestKeria.getInstance(contextName);
+  const env = resolveEnvironment<TestEnvironmentRegPilot>("docker");
   await downloadConfigWorkflowReports(bankName, true, false, false, refresh);
 
   // await generateBankConfig(bankNum);
   configJson = await getConfig(testPaths.testUserConfigFile);
-  configJson['context'] = `vlei-issuance-reports-bank-test-workflow`
+  configJson["context"] = `vlei-issuance-reports-bank-test-workflow`;
 
   console.log(
     `Running vlei issuance and reports generation test for bank: ${bankName}`,
   );
   const bankDirPath = testPaths.testUserDir;
 
-// Load a specific workflow
-const workflow = loadPackagedWorkflow('singlesig-single-user-light');
+  // Load a specific workflow
+  const workflow = loadPackagedWorkflow("singlesig-single-user-light");
 
-await TestKeria.getInstance(configJson['context'],
-  testPaths,
-  "localhost",
-  "localhost",
-  "localhost",
-  20000,
-  4,
-);
+  await TestKeria.getInstance(
+    configJson["context"],
+    testPaths,
+    "localhost",
+    "localhost",
+    "localhost",
+    20000,
+    4,
+  );
 
   if (workflow && configJson) {
-    const wr = new WorkflowRunner(workflow, configJson, configJson.context)
+    const wr = new WorkflowRunner(workflow, configJson, configJson.context);
     wr.registerRunner("generate_report", new GenerateReportStepRunner());
     wr.registerRunner("api_test", new ApiTestStepRunner());
     wr.registerRunner(
