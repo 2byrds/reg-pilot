@@ -1,7 +1,10 @@
 {
   "extends": "../tsconfig.node.json",
   "compilerOptions": {
-    "baseUrl": "."
+    "baseUrl": ".",
+    "moduleResolution": "node16",
+    "module": "Node16",
+    "types": ["jest", "node"]
   },
   "include": ["../src/**/*", "**/*"]
 }

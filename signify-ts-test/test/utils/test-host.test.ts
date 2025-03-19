@@ -1,4 +1,4 @@
-import { convertDockerHost, replaceUrlHost } from "../../src/utils/test-host";
+import { convertDockerHost, replaceUrlHost } from "../../src/utils/test-host.js";
 
 describe("replaceUrlHost", () => {
   const originalEnv = process.env;

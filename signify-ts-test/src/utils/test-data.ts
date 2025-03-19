@@ -1,14 +1,13 @@
 import path from "path";
 import fs from "fs";
-import { ECR_SCHEMA_SAID } from "../constants";
-import { SignifyClient } from "signify-ts";
-import { TestEnvironmentRegPilot } from "./resolve-env";
+import { TestEnvironmentRegPilot } from "./resolve-env.js";
 import {
   buildAidData,
   getOrCreateClients,
   TestKeria,
   TestPaths,
-} from "vlei-verifier-workflows";
+  ECR_SCHEMA_SAID,
+} from "@gleif-it/vlei-verifier-workflows";
 
 export const EXTERNAL_MAN_TYPE = "external_manifest";
 export const SIMPLE_TYPE = "simple";
@@ -36,7 +35,7 @@ export async function getApiTestData(
     } else {
       secret = aidData[aid].agent.secret;
     }
-    const testKeria = await TestKeria.getInstance(configJson["context"]);
+    const testKeria = await TestKeria.getInstance(configJson[TestKeria.AGENT_CONTEXT]);
     const clients = await getOrCreateClients(testKeria, 1, [secret], true);
     const roleClient = clients[clients.length - 1];
     let apiUser: ApiUser = {
@@ -98,20 +97,6 @@ export function getReportGenTestData() {
     reportTypes: reportTypes,
     unsignedReports: unsignedReports,
   };
-}
-
-export async function getGrantedCredential(
-  client: SignifyClient,
-  credId: string,
-): Promise<any> {
-  const credentialList = await client.credentials().list({
-    filter: { "-d": credId },
-  });
-  let credential: any;
-  if (credentialList.length > 0) {
-    credential = credentialList[0];
-  }
-  return credential;
 }
 
 export function getDefaultOrigReports(): string[] {

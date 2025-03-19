@@ -1,8 +1,7 @@
 import { strict as assert } from "assert";
-import { TestEnvironmentRegPilot } from "../src/utils/resolve-env";
-import { ApiUser, isEbaDataSubmitter } from "../src/utils/test-data";
-import { ApiAdapter } from "../src/api-adapter";
-import { resolveEnvironment } from "vlei-verifier-workflows";
+import { TestEnvironmentRegPilot } from "../src/utils/resolve-env.js";
+import { ApiUser, isEbaDataSubmitter } from "../src/utils/test-data.js";
+import { ApiAdapter } from "../src/api-adapter.js";
 
 const secretsJsonPath = "../src/config/";
 const ECR_SCHEMA_SAID = "EEy9PkikFcANV1l7EHukCeXqrzT1hNZjGlUk7wuMO5jw";

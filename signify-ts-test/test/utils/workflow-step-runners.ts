@@ -1,35 +1,36 @@
 import path from "path";
-import { generate_reports, getEbaSignedReport } from "../../src/utils/report";
+import { generate_reports, getEbaSignedReport } from "../../src/utils/report.js";
 import {
   getApiTestData,
   getReportGenTestData,
-} from "../../src/utils/test-data";
+} from "../../src/utils/test-data.js";
 import {
   run_api_admin_test,
   run_api_revocation_test,
   run_api_test,
   run_api_test_no_delegation,
   run_eba_api_test,
-} from "../reg-pilot-api";
-import { createZipWithCopies } from "../../src/utils/bank-reports";
-import { run_vlei_verification_test } from "../vlei-verification";
+} from "../reg-pilot-api.js";
+import { createZipWithCopies } from "../../src/utils/bank-reports.js";
+import { run_vlei_verification_test } from "../vlei-verification.js";
 import {
   buildAidData,
+  EnvironmentRegistry,
   resolveEnvironment,
   TestKeria,
   TestPaths,
   StepRunner,
   getOrCreateClients,
   VleiIssuance,
-} from "vlei-verifier-workflows";
-import { TestEnvironmentRegPilot } from "../../src/utils/resolve-env";
+} from "@gleif-it/vlei-verifier-workflows";
+import { TestEnvironmentRegPilot } from "../../src/utils/resolve-env.js";
 
 export class GenerateReportXmlStepRunner extends StepRunner {
   type: string = "generate_report_xml";
   public async run(stepName: string, step: any, configJson: any): Promise<any> {
     const testData = getReportGenTestData();
     const aidData = await buildAidData(configJson);
-    const testKeria = await TestKeria.getInstance(configJson["context"]);
+    const testKeria = await TestKeria.getInstance(configJson[TestKeria.AGENT_CONTEXT]);
     const clients = await getOrCreateClients(
       testKeria,
       1,
@@ -81,7 +82,7 @@ export class SignReportStepRunner extends StepRunner {
   type: string = "sign_report";
   public async run(stepName: string, step: any, configJson: any): Promise<any> {
     const env = resolveEnvironment<TestEnvironmentRegPilot>(
-      configJson["context"],
+      configJson[EnvironmentRegistry.ENVIRONMENT_CONTEXT]
     );
     const paths = TestPaths.getInstance();
     const apiUsers = await getApiTestData(configJson, env, [step.aid]);
@@ -100,13 +101,13 @@ export class ApiTestStepRunner extends StepRunner {
   type: string = "api_test";
   public async run(stepName: string, step: any, configJson: any): Promise<any> {
     const env = resolveEnvironment<TestEnvironmentRegPilot>(
-      configJson["context"],
+      configJson[EnvironmentRegistry.ENVIRONMENT_CONTEXT],
     );
     const apiUsers = await getApiTestData(configJson, env, step.aids);
     let result;
     if (step.test_case == "api_test_revocation") {
       const aidData = await buildAidData(configJson);
-      const testKeria = await TestKeria.getInstance(configJson["context"]);
+      const testKeria = await TestKeria.getInstance(configJson[TestKeria.AGENT_CONTEXT]);
       const clients = await getOrCreateClients(
         testKeria,
         1,
@@ -143,13 +144,12 @@ export class ApiTestStepRunner extends StepRunner {
 export class VleiVerificationTestStepRunner extends StepRunner {
   type: string = "vlei_verification_test";
   public async run(
-    vi: VleiIssuance,
     stepName: string,
     step: any,
     configJson: any = null,
   ): Promise<any> {
     const env = resolveEnvironment<TestEnvironmentRegPilot>(
-      configJson["context"],
+      configJson[EnvironmentRegistry.ENVIRONMENT_CONTEXT],
     );
     const apiUsers = await getApiTestData(configJson, env, step.aids);
     const result = await run_vlei_verification_test(env, apiUsers, configJson);

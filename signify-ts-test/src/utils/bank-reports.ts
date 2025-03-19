@@ -2,7 +2,7 @@ import AdmZip from "adm-zip";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import { TestPaths } from "vlei-verifier-workflows";
+import { TestPaths } from "@gleif-it/vlei-verifier-workflows";
 
 const bankReportsUrl =
   "https://raw.githubusercontent.com/aydarng/bank_reports/main";

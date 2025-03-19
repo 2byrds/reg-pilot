@@ -11,23 +11,22 @@ import {
   loadWorkflow,
   resolveEnvironment,
   startDockerServices,
-  TestEnvironment,
+  EnvironmentRegistry,
+  TestKeria,
   TestPaths,
-} from "vlei-verifier-workflows";
+} from "@gleif-it/vlei-verifier-workflows";
 
-import { SIMPLE_TYPE } from "../src/utils/test-data";
+import { SIMPLE_TYPE } from "../src/utils/test-data.js";
 
-import { downloadConfigWorkflowReports } from "../src/utils/bank-reports";
+import { downloadConfigWorkflowReports } from "../src/utils/bank-reports.js";
 import {
   ApiTestStepRunner,
   GenerateReportStepRunner,
   SignReportStepRunner,
   VleiVerificationTestStepRunner,
-} from "./utils/workflow-step-runners";
+} from "./utils/workflow-step-runners.js";
 import assert from "assert";
-import { TestKeria } from "vlei-verifier-workflows/dist/utils/test-keria";
-import { TestEnvironmentRegPilot } from "../src/utils/resolve-env";
-import { EnvironmentRegistry } from "vlei-verifier-workflows";
+import { TestEnvironmentRegPilot } from "../src/utils/resolve-env.js";
 
 // List all available workflows
 const availableWorkflows = listPackagedWorkflows();
@@ -41,7 +40,7 @@ console.log(`run-workflow-bank process.argv array: ${process.argv}`);
 const API_TEST_NAME = "reg-api-bank-test-workflow";
 const EBA_TEST_NAME = "eba-bank-test-workflow";
 const ISSUANCE_TEST_NAME = "issuance-bank-test-workflow";
-// Test context constants - use these for test names, configJson['context'], and keria instance IDs
+// Test context constants
 const TEST_CONTEXTS = {
   API_TEST: API_TEST_NAME,
   EBA_TEST: EBA_TEST_NAME,
@@ -196,7 +195,8 @@ test("reg-api-bank-test-workflow", async function run() {
   await downloadConfigWorkflowReports(bankName, true, false, false, refresh);
   // await generateBankConfig(bankNum);
   configJson = await getConfig(testPaths.testUserConfigFile);
-  configJson["context"] = contextName;
+  configJson[TestKeria.AGENT_CONTEXT] = contextName;
+  configJson[EnvironmentRegistry.ENVIRONMENT_CONTEXT] = contextName;
 
   const workflowPath = path.join(
     testPaths.workflowsDir,
@@ -225,7 +225,7 @@ test("reg-api-bank-test-workflow", async function run() {
   const workflow = loadWorkflow(workflowPath);
 
   if (workflow && configJson) {
-    const wr = new WorkflowRunner(workflow, configJson, configJson["context"]);
+    const wr = new WorkflowRunner(workflow, configJson, configJson[EnvironmentRegistry.ENVIRONMENT_CONTEXT], configJson[TestKeria.AGENT_CONTEXT]);
     wr.registerRunner("generate_report", new GenerateReportStepRunner());
     wr.registerRunner("api_test", new ApiTestStepRunner());
     wr.registerRunner("sign_report", new SignReportStepRunner());
@@ -282,7 +282,8 @@ test.skip("eba-bank-test-workflow", async function run() {
   await downloadConfigWorkflowReports(bankName, false, false, false, refresh);
   // await generateBankConfig(bankNum);
   configJson = await getConfig(testPaths.testUserConfigFile);
-  configJson["context"] = contextName;
+  configJson[TestKeria.AGENT_CONTEXT] = contextName;
+  configJson[EnvironmentRegistry.ENVIRONMENT_CONTEXT] = contextName;
 
   const workflowPath = path.join(
     testPaths.workflowsDir,
@@ -291,7 +292,7 @@ test.skip("eba-bank-test-workflow", async function run() {
   const workflow = loadWorkflow(workflowPath);
 
   if (workflow && configJson) {
-    const wr = new WorkflowRunner(workflow, configJson, configJson["context"]);
+    const wr = new WorkflowRunner(workflow, configJson, configJson[EnvironmentRegistry.ENVIRONMENT_CONTEXT], configJson[TestKeria.AGENT_CONTEXT]);
     wr.registerRunner("generate_report", new GenerateReportStepRunner());
     wr.registerRunner("api_test", new ApiTestStepRunner());
     wr.registerRunner("sign_report", new SignReportStepRunner());
@@ -305,14 +306,15 @@ test("issuance-bank-test-workflow", async function run() {
     `Running vlei-issuance-reports-bank-test-workflow for bank: ${bankName}`,
   );
   process.env.REPORT_TYPES = SIMPLE_TYPE;
-  const contextName = `${EBA_TEST_NAME}-${bankName}`;
+  const contextName = `${ISSUANCE_TEST_NAME}-${bankName}`;
   const keriaInstance = await TestKeria.getInstance(contextName);
   const env = resolveEnvironment<TestEnvironmentRegPilot>("docker");
   await downloadConfigWorkflowReports(bankName, true, false, false, refresh);
 
   // await generateBankConfig(bankNum);
   configJson = await getConfig(testPaths.testUserConfigFile);
-  configJson["context"] = `vlei-issuance-reports-bank-test-workflow`;
+  configJson[TestKeria.AGENT_CONTEXT] = contextName;
+  configJson[EnvironmentRegistry.ENVIRONMENT_CONTEXT] = contextName;
 
   console.log(
     `Running vlei issuance and reports generation test for bank: ${bankName}`,
@@ -323,7 +325,7 @@ test("issuance-bank-test-workflow", async function run() {
   const workflow = loadPackagedWorkflow("singlesig-single-user-light");
 
   await TestKeria.getInstance(
-    configJson["context"],
+    configJson[TestKeria.AGENT_CONTEXT],
     testPaths,
     "localhost",
     "localhost",
@@ -333,7 +335,7 @@ test("issuance-bank-test-workflow", async function run() {
   );
 
   if (workflow && configJson) {
-    const wr = new WorkflowRunner(workflow, configJson, configJson.context);
+    const wr = new WorkflowRunner(workflow, configJson, configJson[EnvironmentRegistry.ENVIRONMENT_CONTEXT], configJson[TestKeria.AGENT_CONTEXT]);
     wr.registerRunner("generate_report", new GenerateReportStepRunner());
     wr.registerRunner("api_test", new ApiTestStepRunner());
     wr.registerRunner(

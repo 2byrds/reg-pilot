@@ -3,10 +3,10 @@ import fs from "fs";
 import * as path from "path";
 import AdmZip from "adm-zip";
 import * as fsExtra from "fs-extra";
-import { generateFileDigest } from "./generate-digest";
-import signify, { Signer } from "signify-ts";
-import { unknownPrefix } from "../constants";
-import { TestPaths } from "vlei-verifier-workflows";
+import { generateFileDigest } from "./generate-digest.js";
+import signify from "signify-ts";
+import { Signer } from "signify-ts";
+import { unknownPrefix, TestPaths } from "@gleif-it/vlei-verifier-workflows";
 
 export const EXTERNAL_MAN_TYPE = "external_manifest";
 export const SIMPLE_TYPE = "simple";

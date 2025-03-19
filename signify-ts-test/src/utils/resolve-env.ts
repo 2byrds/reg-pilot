@@ -1,4 +1,4 @@
-import { TestEnvironment } from "vlei-verifier-workflows";
+import { TestEnvironment } from "@gleif-it/vlei-verifier-workflows";
 
 export interface TestEnvironmentRegPilot extends TestEnvironment {
   apiBaseUrl: string;
