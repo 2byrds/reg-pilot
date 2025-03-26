@@ -2,7 +2,7 @@ import { strict as assert } from "assert";
 import fs from "fs";
 import * as process from "process";
 import path from "path";
-import { HabState, SignifyClient } from "signify-ts";
+import signify from "signify-ts";
 import { ApiAdapter } from "../src/api-adapter.js";
 import { generateFileDigest } from "../src/utils/generate-digest.js";
 import { TestEnvironmentRegPilot } from "../src/utils/resolve-env.js";
@@ -74,7 +74,7 @@ export async function run_api_admin_test(
 }
 
 export async function run_api_revocation_test(
-  requestorClient: SignifyClient,
+  requestorClient: signify.SignifyClient,
   requestorAidAlias: string,
   requestorAidPrefix: string,
   credentials: Map<string, ApiUser>,
@@ -707,7 +707,7 @@ async function revoked_cred_upload_test(
   credentials: Map<string, ApiUser>,
   requestorAidAlias: string,
   requestorAidPrefix: string,
-  requestorClient: SignifyClient,
+  requestorClient: signify.SignifyClient,
   env: TestEnvironmentRegPilot,
 ) {
   const apiAdapter = new ApiAdapter(env.apiBaseUrl, env.filerBaseUrl);
@@ -896,11 +896,11 @@ export async function checkSignedUpload(
 }
 
 export async function checkFailUpload(
-  roleClient: SignifyClient,
+  roleClient: signify.SignifyClient,
   failUpResp: Response,
   fileName: string,
   failZipDig: string,
-  ecrAid: HabState,
+  ecrAid: signify.HabState,
   env: TestEnvironmentRegPilot,
 ): Promise<boolean> {
   const apiAdapter = new ApiAdapter(env.apiBaseUrl, env.filerBaseUrl);
@@ -980,7 +980,7 @@ async function checkLogin(
 ) {
   let heads = new Headers();
   heads.set("Content-Type", "application/json");
-  const client: SignifyClient = user.roleClient;
+  const client: signify.SignifyClient = user.roleClient;
   heads.set("Connection", "close"); // avoids debugging fetch failures
   let creq = { headers: heads, method: "GET", body: null };
   let cpath = `/checklogin/${user.ecrAid.prefix}`;
@@ -1104,7 +1104,7 @@ async function ebaLogin(
 async function presentRevocation(
   requestorAidAlias: string,
   requestorAidPrefix: string,
-  requestorClient: SignifyClient,
+  requestorClient: signify.SignifyClient,
   cred: any,
   credCesr: any,
 ) {

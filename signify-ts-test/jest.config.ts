@@ -14,6 +14,7 @@ const config: Config = {
       tsconfig: "test/tsconfig.json"
     }],
   },
+  testTimeout: 300000,
 };
 
 export default config;

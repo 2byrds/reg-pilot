@@ -5,7 +5,7 @@ import AdmZip from "adm-zip";
 import * as fsExtra from "fs-extra";
 import { generateFileDigest } from "./generate-digest.js";
 import signify from "signify-ts";
-import { Signer } from "signify-ts";
+import Signer from "signify-ts";
 import { unknownPrefix, TestPaths } from "@gleif-it/vlei-verifier-workflows";
 
 export const EXTERNAL_MAN_TYPE = "external_manifest";
@@ -482,7 +482,7 @@ async function addSignatureToReport(
   ecrAid: string,
 ): Promise<boolean> {
   const sigs = [] as string[];
-  for (const signer of keeper.signers as Signer[]) {
+  for (const signer of keeper.signers as signify.Signer[]) {
     const nonPrefixedDigest = signatureBlock.digest.split("-", 2)[1];
     // console.log(`Signing non-prefixed digest ${nonPrefixedDigest}`);
 

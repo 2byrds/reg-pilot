@@ -4,7 +4,9 @@
     "baseUrl": ".",
     "moduleResolution": "node16",
     "module": "Node16",
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["../src/**/*", "**/*"]
+  "include": ["../src/**/*", "**/*", "../jest.setup.ts"]
 }

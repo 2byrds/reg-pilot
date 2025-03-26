@@ -1,4 +1,4 @@
-import { SignifyClient } from "signify-ts";
+import signify from "signify-ts";
 import FormData from "form-data";
 import path from "path";
 
@@ -21,7 +21,7 @@ export class ApiAdapter {
   public async dropReportStatusByAid(
     aidName: string,
     aidPrefix: string,
-    client: SignifyClient,
+    client: signify.SignifyClient,
   ): Promise<Response> {
     const heads = new Headers();
     const dreq = { headers: heads, method: "POST", body: null };
@@ -34,7 +34,7 @@ export class ApiAdapter {
   public async getReportStatusByAid(
     aidName: string,
     aidPrefix: string,
-    client: SignifyClient,
+    client: signify.SignifyClient,
   ): Promise<Response> {
     const heads = new Headers();
     const sreq = { headers: heads, method: "GET", body: null };
@@ -47,7 +47,7 @@ export class ApiAdapter {
   public async getReportsStatusAdmin(
     aidName: string,
     aidPrefix: string,
-    client: SignifyClient,
+    client: signify.SignifyClient,
   ): Promise<Response> {
     const heads = new Headers();
     const sreq = { headers: heads, method: "GET", body: null };
@@ -61,7 +61,7 @@ export class ApiAdapter {
     aidName: string,
     aidPrefix: string,
     dig: string,
-    client: SignifyClient,
+    client: signify.SignifyClient,
   ): Promise<Response> {
     const heads = new Headers();
     const sreq = { headers: heads, method: "GET", body: null };
@@ -74,7 +74,7 @@ export class ApiAdapter {
   public async getLeiReportStatusesByAid(
     aidName: string,
     aidPrefix: string,
-    client: SignifyClient,
+    client: signify.SignifyClient,
   ): Promise<Response> {
     const heads = new Headers();
     const sreq = { headers: heads, method: "GET", body: null };
@@ -90,7 +90,7 @@ export class ApiAdapter {
     fileName: string,
     zipBuffer: Buffer,
     zipDigest: string,
-    client: SignifyClient,
+    client: signify.SignifyClient,
   ): Promise<Response> {
     let formData = new FormData();
     let ctype = "application/zip";
@@ -126,7 +126,7 @@ export class ApiAdapter {
     aidName: string,
     fileName: string,
     zipBuffer: Buffer,
-    client: SignifyClient,
+    client: signify.SignifyClient,
     token: string,
   ): Promise<Response> {
     let formData = new FormData();
